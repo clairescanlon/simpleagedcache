@@ -1,51 +1,25 @@
 package io.collective;
 
 import java.time.Clock;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-public class SimpleAgedCache {
-    private final ExpirableEntry[] entries;
+public class SimpleAgedCache<K,V> {
+    private final Map<K, ExpirableEntry<K,V>> cache;
     private final Clock clock;
-    private int size;
+    private final long expirationDuration;
+    private final TimeUnit expirationTimeUnit;
 
-    public SimpleAgedCache(Clock clock) {
+    public SimpleAgedCache(Clock clock, long expirationDuration, TimeUnit expirationTimeUnit) {
         this.clock = clock;
-        this.entries = new ExpirableEntry[16]; // initial capacity of 16
-        this.size = 0;
+        this.expirationDuration = expirationDuration;
+        this.expirationTimeUnit = expirationTimeUnit;
+        this.cache = new LinkedHashMap<>();
     }
 
-    public SimpleAgedCache() {
-        this(Clock.systemDefaultZone());
+    public SimpleAgedCache(long expirationDuration, TimeUnit expirationTimeUnit) {
+        this(Clock.systemDefaultZone(), expirationDuration, expirationTimeUnit);
     }
 
-    public void put(Object key, Object value, int retentionInMillis) {
-        ExpirableEntry<Object, Object> entry = new ExpirableEntry<>(key, value, retentionInMillis, clock);
-  
-        // Check to see if array needs to be resized
-        if (size== entries.length) {
-            ExpirableEntry[] newEntries = new ExpirableEntry[entries.length * 2];
-            System.arraycopy(entries, 0, newEntries, 0, entries.length);
-            entries = newEntries;
-        }
-        
-        //add the new entry to the array
-        entries[size++] = entry;
-    }
-
-    public boolean isEmpty() {
-        return size == 0;
-    }
-
-    public int size() {
-        return size;
-    }
-
-    public Object get(Object key) {
-        for (int i = 0; i < size; i++) {
-            ExpirableEntry<Object, Object> entry = entries[i];
-            if (entry !=null && entry.getKey().equals(key) && !entry.isExpired(clock.millis())) 
-            {
-                return entry.getValue();
-            
-        }
-    }
-}
+   
