@@ -32,14 +32,20 @@ public class SimpleAgedCache {
     }
 
     public boolean isEmpty() {
-        return false;
+        return size == 0;
     }
 
     public int size() {
-        return 0;
+        return size;
     }
 
     public Object get(Object key) {
-        return null;
+        for (int i = 0; i < size; i++) {
+            ExpirableEntry<Object, Object> entry = entries[i];
+            if (entry !=null && entry.getKey().equals(key) && !entry.isExpired(clock.millis())) 
+            {
+                return entry.getValue();
+            
+        }
     }
 }
