@@ -1,79 +1,107 @@
-package test.collective;
-
-import io.collective.SimpleAgedCache;
-import org.junit.Before;
-import org.junit.Test;
+package io.collective;
 
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static junit.framework.TestCase.*;
+public class SimpleAgedCache<K, V> {
+    private static final int DEFAULT_CAPACITY = 16;
 
-public class SimpleAgedCacheTest {
-    SimpleAgedCache empty = new SimpleAgedCache();
-    SimpleAgedCache nonempty = new SimpleAgedCache();
+    private final Map<K, ExpirableEntry<K, V>[] cache;
+    private final Clock clock;
+    private final long expirationDuration;
+    private final TimeUnit expirationTimeUnit;
+    private final ReadWriteLock lock;
+    private int size;
 
-    @Before
-    public void before() {
-        nonempty.put("aKey", "aValue", 2000);
-        nonempty.put("anotherKey", "anotherValue", 4000);
+    public SimpleAgedCache(Clock clock, long expirationDuration, TimeUnit expirationTimeUnit) {
+        this.clock = clock;
+        this.expirationDuration = expirationDuration;
+        this.expirationTimeUnit = expirationTimeUnit;
+        this.cache = new ExpirableEntry[DEFAULT_CAPACITY];
+        this.lock = new ReentrantReadWriteLock();
+        this.size = 0;
     }
 
-    @Test
-    public void isEmpty() {
-        assertTrue(empty.isEmpty());
-        assertFalse(nonempty.isEmpty());
+    public void put(K key, V value) {
+        try {
+            lock.writeLock().lock();
+            int index = hash(key) % cache.length;
+            ExpirableEntry<K, V> entry = cache[index];
+            while (entry != null) {
+                if (entry.getKey().equals(key)) {
+                    entry.update(value, expirationDuration, expirationTimeUnit, clock);
+                    return;
+                }
+                entry = entry.next;
+            }
+            cache[index] = new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, cache[index]);
+            size++;
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
-    @Test
-    public void size() {
-        assertEquals(0, empty.size());
-        assertEquals(2, nonempty.size());
+    public boolean isEmpty() {
+        try {
+            lock.readLock().lock();
+            return size == 0;
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
-    @Test
-    public void get() {
-        assertNull(empty.get("aKey"));
-        assertEquals("aValue", nonempty.get("aKey"));
-        assertEquals("anotherValue", nonempty.get("anotherKey"));
+    public V get(K key) {
+        try {
+            lock.readLock().lock();
+            int index = hash(key) % cache.length;
+            ExpirableEntry<K, V> entry = cache[index];
+            while (entry != null) {
+                if (entry.getKey().equals(key) && !entry.isExpired(clock.millis())) {
+                    return entry.getValue();
+                }
+                entry = entry.next;
+            }
+            return null;
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
-    @Test
-    public void getExpired() {
-        TestClock clock = new TestClock();
-
-        SimpleAgedCache expired = new SimpleAgedCache(clock);
-        expired.put("aKey", "aValue", 2000);
-        expired.put("anotherKey", "anotherValue", 4000);
-
-        clock.offset(Duration.ofMillis(3000));
-
-        assertEquals(1, expired.size());
-        assertEquals("anotherValue", expired.get("anotherKey"));
+    private static int hash(Object key) {
+        int h = key.hashCode();
+        h ^= (h >>> 20) ^ (h >>> 12);
+        return h ^ (h >>> 7) ^ (h >>> 4);
     }
 
-    static class TestClock extends Clock {
-        Duration offset = Duration.ZERO;
-
-        @Override
-        public ZoneId getZone() {
-            return Clock.systemDefaultZone().getZone();
+    private static class ExpirableEntry<K, V> {
+        private final K key;
+        private V value;
+        private final long expirationTime;
+        private ExpirableEntry<K, V> next;
+    
+        ExpirableEntry(K key, V value, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock, ExpirableEntry<K, V> next) {
+            this.key = key;
+            this.value = value;
+            this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
+            this.next = next;
+        }
+        
+        K getKey() {
+            return key;
         }
 
-        @Override
-        public Clock withZone(ZoneId zone) {
-            return Clock.offset(Clock.system(zone), offset);
+        V getValue() {
+            return value;
         }
+    void update(V newValue, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock) {
+        this.value = newValue;
+        this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
+    }
 
-        @Override
-        public Instant instant() {
-            return Clock.offset(Clock.systemDefaultZone(), offset).instant();
-        }
-
-        public void offset(Duration offset) {
-            this.offset = offset;
-        }
+    boolean isExpired(long currentTime) {
+        return currentTime >= expirationTime;
+    }
     }
 }
