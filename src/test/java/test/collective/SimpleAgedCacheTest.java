@@ -1,99 +1,55 @@
 package io.collective;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.time.Clock;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class SimpleAgedCache<K, V> {
-    private static final int DEFAULT_CAPACITY = 16;
-    private final Map<K, ExpirableEntry<K, V>> cache;
-    private final Clock clock;
-    private final long expirationDuration;
-    private final TimeUnit expirationTimeUnit;
-    private final ReadWriteLock lock;
-    private int size;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-    public SimpleAgedCache(Clock clock, long expirationDuration, TimeUnit expirationTimeUnit) {
-        this.clock = clock;
-        this.expirationDuration = expirationDuration;
-        this.expirationTimeUnit = expirationTimeUnit;
-        this.cache = new HashMap<>(DEFAULT_CAPACITY);
-        this.lock = new ReentrantReadWriteLock();
-        this.size = 0;
+
+/**
+ * A simple implementation of an aged cache.
+ */
+public class SimpleAgedCache {
+    private SimpleAgedCache<String, String> cache;
+    private Clock clock;
+
+    @BeforeEach
+    public void setup() {
+       clock= Clock.systemDefaultZone();
+       cache = new SimpleAgedCache(clock, 1, TimeUnit.MINUTES);
     }
 
-    public void put(K key, V value) {
-        try {
-            lock.writeLock().lock();
-            ExpirableEntry<K, V> entry = cache.get(key);
-            if (entry != null) {
-                entry.update(value, expirationDuration, expirationTimeUnit, clock);
-            } else {
-                cache.put(key, new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
-                size++;
-            }
-        } finally {
-            lock.writeLock().unlock();
-        }
+    @Test
+    public void testPut() {
+        cache.put("key", "value");
+        assertEquals("value", cache.get("key"));
     }
 
-    public boolean isEmpty() {
-        try {
-            lock.readLock().lock();
-            return size == 0;
-        } finally {
-            lock.readLock().unlock();
-        }
+@Test 
+public void testPutUpdatesExpirationTime() {
+    Instant now = clock.instant();
+    cache.put("key", "value");
+    ExpirableEntry entry = cache.get("key");
+    long expirationTime = entry.expirationTime;
+    assertTrue(now.plus(Duration.ofMinutes(1)).isAfter(Instant.ofEpochMilli(expirationTime)));
     }
 
-    public V get(K key) {
-        try {
-            lock.readLock().lock();
-            ExpirableEntry<K, V> entry = cache.get(key);
-            if (entry != null && !entry.isExpired(clock.millis())) {
-                return entry.getValue();
-            }
-            return null;
-        } finally {
-            lock.readLock().unlock();
-        }
+@Test 
+public void testGetReturnsNullForExpiredKey() {
+    cache.put("key", "value", 1, TimeUnit.MILLISECONDS);
+    clock.offset(clock, Duration.ofSeconds(2));
+    assertNull(cache.get("key"));
     }
 
-    private static int hash(Object key) {
-        int h = key.hashCode();
-        h ^= (h >>> 20) ^ (h >>> 12);
-        return h ^ (h >>> 7) ^ (h >>> 4);
-    }
-
-    private static class ExpirableEntry<K, V> {
-        private final K key;
-        private V value;
-        private final long expirationTime;
-
-        ExpirableEntry(K key, V value, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock, ExpirableEntry<K, V> next) {
-            this.key = key;
-            this.value = value;
-            this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
-        }
-
-        K getKey() {
-            return key;
-        }
-
-        V getValue() {
-            return value;
-        }
-
-        void update(V newValue, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock) {
-            this.value = newValue;
-            this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
-        }
-
-        boolean isExpired(long currentTime) {
-            return currentTime >= expirationTime;
-        }
+@Test 
+public void testIsEmpty() {
+    assertTrue(cache.isEmpty());
+    cache.put("key", "value");
+    assertFalse(cache.isEmpty());
     }
 }
