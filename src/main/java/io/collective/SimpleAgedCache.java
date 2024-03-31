@@ -1,14 +1,16 @@
 package io.collective;
 
 import java.time.Clock;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class SimpleAgedCache<K, V> {
     private static final int DEFAULT_CAPACITY = 16;
-
-    private final Map<K, ExpirableEntry<K, V>[] cache;
+    private final Map<K, ExpirableEntry<K, V>>[] cache;
     private final Clock clock;
     private final long expirationDuration;
     private final TimeUnit expirationTimeUnit;
@@ -19,7 +21,7 @@ public class SimpleAgedCache<K, V> {
         this.clock = clock;
         this.expirationDuration = expirationDuration;
         this.expirationTimeUnit = expirationTimeUnit;
-        this.cache = new ExpirableEntry[DEFAULT_CAPACITY];
+        this.cache = newHashMap<>(DEFAULT_CAPACITY);
         this.lock = new ReentrantReadWriteLock();
         this.size = 0;
     }
@@ -27,17 +29,12 @@ public class SimpleAgedCache<K, V> {
     public void put(K key, V value) {
         try {
             lock.writeLock().lock();
-            int index = hash(key) % cache.length;
-            ExpirableEntry<K, V> entry = cache[index];
-            while (entry != null) {
-                if (entry.getKey().equals(key)) {
-                    entry.update(value, expirationDuration, expirationTimeUnit, clock);
-                    return;
-                }
-                entry = entry.next;
+            ExpirableEntry<K, V> entry = cache.get(key);
+            if (entry != null) {
+                entry.update(value, expirationDuration, expirationTimeUnit, clock);
+            } else {
+                cache.put(key, new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
             }
-            cache[index] = new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, cache[index]);
-            size++;
         } finally {
             lock.writeLock().unlock();
         }
@@ -56,12 +53,9 @@ public class SimpleAgedCache<K, V> {
         try {
             lock.readLock().lock();
             int index = hash(key) % cache.length;
-            ExpirableEntry<K, V> entry = cache[index];
-            while (entry != null) {
-                if (entry.getKey().equals(key) && !entry.isExpired(clock.millis())) {
-                    return entry.getValue();
-                }
-                entry = entry.next;
+            ExpirableEntry<K, V> entry = cache.get(key);
+            if (entry != null && !entry.isExpired(clock.millis())) {
+                return entry.getValue();
             }
             return null;
         } finally {
@@ -79,15 +73,13 @@ public class SimpleAgedCache<K, V> {
         private final K key;
         private V value;
         private final long expirationTime;
-        private ExpirableEntry<K, V> next;
-    
+
         ExpirableEntry(K key, V value, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock, ExpirableEntry<K, V> next) {
             this.key = key;
             this.value = value;
             this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
-            this.next = next;
         }
-        
+
         K getKey() {
             return key;
         }
@@ -95,13 +87,13 @@ public class SimpleAgedCache<K, V> {
         V getValue() {
             return value;
         }
-    void update(V newValue, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock) {
-        this.value = newValue;
-        this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
-    }
 
-    boolean isExpired(long currentTime) {
-        return currentTime >= expirationTime;
+        void update(V newValue, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock) {
+            this.value = newValue;
+            this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
+        }
+
+        boolean isExpired(long currentTime) {
+            return currentTime >= expirationTime;
+        }
     }
-    }
-}

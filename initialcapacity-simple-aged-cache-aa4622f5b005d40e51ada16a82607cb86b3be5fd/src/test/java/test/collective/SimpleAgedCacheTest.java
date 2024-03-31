@@ -1,9 +1,7 @@
 package test.collective;
-
 import io.collective.SimpleAgedCache;
 import org.junit.Before;
 import org.junit.Test;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
