@@ -44,7 +44,7 @@ public class SimpleAgedCache<K, V> {
            if (entry != null) {
                entry.update(value, expirationDuration, expirationTimeUnit, clock);
            } else {
-               cache.put(key, new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
+            cache.put(key, new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
            }
         } finally {
             lock.writeLock().unlock();
