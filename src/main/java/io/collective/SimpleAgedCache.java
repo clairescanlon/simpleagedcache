@@ -31,11 +31,11 @@ public class SimpleAgedCache<K, V> {
     public void put(K key, V value) {
         try {
             lock.writeLock().lock();
-            ExpirableEntry<K, V> entry = (ExpirableEntry<K, V>) cache.get(key);
+            ExpirableEntry<K, V> entry = cache.get(key); // Update the type of 'entry' variable
             if (entry != null) {
                 entry.update(value, expirationDuration, expirationTimeUnit, clock);
             } else {
-                cache.put(key, new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
+                cache.put(key, new ExpirableEntry<K, V>(key, value, expirationDuration, expirationTimeUnit, clock, null));
             }
         } finally {
             lock.writeLock().unlock();
