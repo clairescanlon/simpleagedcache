@@ -6,11 +6,10 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class SimpleAgedCache<K, V> {
     private static final int DEFAULT_CAPACITY = 16;
-    private final Map<K, ExpirableEntry<K, V>>[] cache;
+    private final HashMap<K, V> cache;
     private final Clock clock;
     private final long expirationDuration;
     private final TimeUnit expirationTimeUnit;
@@ -26,11 +25,13 @@ public class SimpleAgedCache<K, V> {
         this.lock = new ReentrantReadWriteLock();
         this.size = 0;
     }
-
+/**
+ * Puts the specified key-value pair into the cache. If the cache already contains the specified key, the value is updated.
+ */
     public void put(K key, V value) {
         try {
             lock.writeLock().lock();
-            ExpirableEntry<K, V> entry = cache.get(key);
+            ExpirableEntry<K, V> entry = (ExpirableEntry<K, V>) cache.get(key);
             if (entry != null) {
                 entry.update(value, expirationDuration, expirationTimeUnit, clock);
             } else {

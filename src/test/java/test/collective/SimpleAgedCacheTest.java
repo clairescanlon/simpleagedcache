@@ -9,9 +9,11 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
-public class SimpleAgedCache<K, V> {
+public class SimpleAgedCacheTest<K, V> {
     private static final int DEFAULT_CAPACITY = 16;
     private final Map<K, ExpirableEntry<K, V>>[] cache;
     private final Clock clock;
@@ -20,7 +22,7 @@ public class SimpleAgedCache<K, V> {
     private final ReadWriteLock lock;
     private int size;
 
-    public SimpleAgedCache(Clock clock, long expirationDuration, TimeUnit expirationTimeUnit) {
+    public SimpleAgedCacheTest(Clock clock, long expirationDuration, TimeUnit expirationTimeUnit) {
         this.clock = clock;
         this.expirationDuration = expirationDuration;
         this.expirationTimeUnit = expirationTimeUnit;
@@ -42,7 +44,9 @@ public class SimpleAgedCache<K, V> {
             lock.writeLock().unlock();
         }
     }
-    
+       /**
+     * Returns the value to which the specified key is mapped, or if this map contains no mapping for the key.
+    */
     public V get(K key) {
         try {
             lock.readLock().lock();
@@ -55,7 +59,12 @@ public class SimpleAgedCache<K, V> {
             lock.readLock().unlock();
         }   
     }
-
+/**
+ * Returns an integer hash code for the specified object. This method
+ * is supported for the benefit of hashtables such as those provided by
+ * {@link java.util.Hashtable}.
+ *
+ */
     private static int hash(Object key) {
         int h = key.hashCode();
         h ^= (h >>> 20) ^ (h >>> 12);
