@@ -21,7 +21,8 @@ public class SimpleAgedCache<K, V> {
         this.clock = clock;
         this.expirationDuration = expirationDuration;
         this.expirationTimeUnit = expirationTimeUnit;
-        this.cache = newHashMap<>(DEFAULT_CAPACITY);
+        int newHashMap;
+        this.cache = new HashMap<K, V>(DEFAULT_CAPACITY);        
         this.lock = new ReentrantReadWriteLock();
         this.size = 0;
     }

@@ -1,11 +1,5 @@
 package test.collective;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -15,8 +9,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.BeforeEach;
 
 
 public class SimpleAgedCache<K, V> {
