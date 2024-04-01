@@ -1,62 +1,115 @@
-package io.collective;
+package test.collective;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
 import org.junit.jupiter.api.BeforeEach;
 
 
-/**
- * A simple implementation of an aged cache.
- */
-public class SimpleAgedCache {
-    private SimpleAgedCache<String, String> cache;
-    private Clock clock;
+public class SimpleAgedCache<K, V> {
+    private static final int DEFAULT_CAPACITY = 16;
+    private final Map<K, ExpirableEntry<K, V>>[] cache;
+    private final Clock clock;
+    private final long expirationDuration;
+    private final TimeUnit expirationTimeUnit;
+    private final ReadWriteLock lock;
+    private int size;
 
-    @BeforeEach
-    public void setup() {
-       clock= Clock.systemDefaultZone();
-       cache = new SimpleAgedCache(clock, 1, TimeUnit.MINUTES);
+    public SimpleAgedCache(Clock clock, long expirationDuration, TimeUnit expirationTimeUnit) {
+        this.clock = clock;
+        this.expirationDuration = expirationDuration;
+        this.expirationTimeUnit = expirationTimeUnit;
+        this.cache = new HashMap[DEFAULT_CAPACITY];
+        this.lock = new ReentrantReadWriteLock();
+        this.size = 0;
     }
 
-    @Test
-    public void get() {
-        cache.put("key", "value");
-        assertEquals("value", cache.get("key"));
-    }
-
-    @Test 
-    public void getExpired() {
-        cache.put("key", "value", 1, TimeUnit.MILLISECONDS);
-        clock.offset(clock, Duration.ofSeconds(2));
-        assertNull(cache.get("key"));
+    public void put(K key, V value) {
+        try {
+            lock.writeLock().lock();
+            int index = key.hashCode() % cache.length;
+            if (cache[index] == null) {
+                cache[index] = new HashMap<>();
+            }
+            cache[index].put(key, new ExpirableEntry<>(key, value, clock.millis() + expirationTimeUnit.toMillis(expirationDuration)));
+            size++;
+        } finally {
+            lock.writeLock().unlock();
         }
-        
-
-    @Test 
-    public void size() {
-        cache.put("key", "value");
-        assertEquals(1, cache.size());
     }
 
-    @Test 
-    public void isEmpty() {
-        assertTrue(cache.isEmpty());
-        cache.put("key", "value");
-        assertFalse(cache.isEmpty());
+    public boolean isEmpty() {
+        try {
+            lock.readLock().lock();
+            return size == 0;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    public V get(K key) {
+        try {
+            lock.readLock().lock();
+            int index = key.hashCode() % cache.length;
+            if (cache[index] == null) {
+                return null;
+            }
+            ExpirableEntry<K, V> entry = cache[index].get(key);
+            if (entry == null) {
+                return null;
+            }
+            if (entry.isExpired()) {
+                cache[index].remove(key);
+                size--;
+                return null;
+            }
+            return entry.getValue();
+        }
+        return null;
+    } finally {
+        lock.readLock().unlock();.
+    }
+}
+
+    private static int hash(Object key) {
+        int h = key.hashCode();
+        h ^= (h >>> 20) ^ (h >>> 12);
+        return h ^ (h >>> 7) ^ (h >>> 4);
+    }
+    private static class ExpirableEntry<K, V> {
+        private final K key;
+        private V value;
+        private final long expirationTime;
+
+        ExpirableEntry(K key, V value, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock, ExpirableEntry<K, V> next) {
+            this.key = key;
+            this.value = value;
+            this.expirationTime = clock.millis() +  expirationTimeUnit.toMillis(expirationDuration);
+        }
+
+        K getKey() {
+            return key;
+        }
+
+        V getValue() {
+            return value;
+        }   
+
+        void update(V newValue, long expirationDuration, TimeUnit expirationTimeUnit, Clock clock) {
+            this.value = newValue;
+            this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
+        }
+
+        boolean isExpired(long currentTime) {
+            return currentTime >= expirationTime;
+        }
     }
 
-    private static class ExpirableEntry {
-    String key;
-    String value;
-    long expirationTime;
-
-    ExpirableEntry(String key, String value, long expirationTime) {
-        this.key = key;
-        this.value = value;
-        this.expirationTime = expirationTime;
-    }
+    private static <K, V> Map<K, V> newHashMap(int capacity) {
+        return new HashMap<K, V>(capacity);
+    } 
