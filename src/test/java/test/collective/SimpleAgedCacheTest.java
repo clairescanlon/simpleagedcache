@@ -44,7 +44,7 @@ public class SimpleAgedCacheTest {
         TestClock clock = new TestClock();
 
         SimpleAgedCache expired = new SimpleAgedCache(clock);
-        expired.put( "aKey", "aValue",2000);
+        expired.put("aKey", "aValue",2000);
         expired.put("anotherKey", "anotherValue", 4000);
 
         clock.offset(Duration.ofMillis(3000));
@@ -52,3 +52,27 @@ public class SimpleAgedCacheTest {
         assertEquals(1, expired.size());
         assertEquals("anotherValue", expired.get("anotherKey"));
     }
+
+    static class TestClock extends Clock {
+        Duration offset = Duration.ZERO;
+
+        @Override
+        public ZoneId getZone() {
+            return Clock.systemDefaultZone().getZone();
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return Clock.offset(Clock.system(zone), offset);
+        }
+
+        @Override
+        public Instant instant() {
+            return Clock.offset(Clock.systemDefaultZone(), offset).instant();
+        }
+
+        public void offset(Duration offset) {
+            this.offset = offset;
+        }
+    }
+}
