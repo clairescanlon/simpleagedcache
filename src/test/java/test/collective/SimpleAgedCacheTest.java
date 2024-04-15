@@ -44,7 +44,7 @@ public class SimpleAgedCacheTest {
         TestClock clock = new TestClock();
 
         SimpleAgedCache expired = new SimpleAgedCache(clock);
-        expired.put("aKey", "aValue",2000);
+        expired.put("aKey", "aValue", 2000);
         expired.put("anotherKey", "anotherValue", 4000);
 
         clock.offset(Duration.ofMillis(3000));
@@ -75,4 +75,9 @@ public class SimpleAgedCacheTest {
             this.offset = offset;
         }
     }
+
+public static class SimpleAgedCacheTest {
+    private static final int DEFAULT_CAPACITY = 16;
+
+}
 }
