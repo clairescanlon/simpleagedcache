@@ -33,4 +33,15 @@ public class SimpleAgedCacheTest {
     }
 
     @Test
-    public void
+    public void getExpired() {
+        TestClock clock = new TestClock();
+
+        SimpleAgedCache expired = new SimpleAgedCache(clock);
+        expired.put("aKey", "aValue", 2000);
+        expired.put("anotherKey", "anotherValue", 4000);
+
+        clock.offset(Duration.ofMillis(30000));
+
+        assertEquals(1, expired.size());
+        assertEquals("anotherValue", expired.get("anotherKey"));
+    }

@@ -1,4 +1,30 @@
 {
     "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx2G -Xms100m -Xlog:disable",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "files.trimFinalNewlines": true,
+    "scm.showIncomingChanges": "always",
+    "notebook.experimental.remoteSave": true,
+    "git.enableSmartCommit": false,
+    "gitlens.ai.experimental.generateCommitMessage.enabled": true,
+    "git.inputValidation": false,
+    "editor.fontSize": 16,
+    "files.autoSave": "onFocusChange",
+    "editor.accessibilityPageSize": 12,
+    "editor.bracketPairColorization.independentColorPoolPerBracketType": true,
+    "editor.defaultFormatter": "GitHub.copilot",
+    "workbench.preferredHighContrastColorTheme": "Tomorrow Night Blue",
+    "workbench.editor.autoLockGroups": {
+        "default": true,
+        "workbench.editors.gettingStartedInput": true
+    },
+    "tabnine.debounceMilliseconds": 20,
+    "typescript.tsc.autoDetect": "off",
+    "editor.minimap.sectionHeaderFontSize": 11,
+    "editor.acceptSuggestionOnEnter": "off",
+    "editor.inlineSuggest.enabled": false,
+    "editor.inlineSuggest.showToolbar": "never",
+    "editor.inlineSuggest.suppressSuggestions": true,
+    "files.autoSaveWhenNoErrors": true,
+    "files.trimTrailingWhitespace": true,
+    "editor.codeLensFontSize": 16
 }
