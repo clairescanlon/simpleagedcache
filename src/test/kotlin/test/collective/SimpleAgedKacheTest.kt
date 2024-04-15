@@ -10,8 +10,8 @@ import java.time.Instant
 import java.time.ZoneId
 
 class SimpleAgedKacheTest {
-    var empty = SimpleAgedKache()
-    var nonempty = SimpleAgedKache()
+    lateinit var empty = SimpleAgedKache()
+    lateinit var nonempty = SimpleAgedKache()
 
     @Before
     fun before() {
