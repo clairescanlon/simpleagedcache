@@ -1,5 +1,6 @@
 package test.collective;
 
+import org.junit.jupiter.api.BeforeEach;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -11,8 +12,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.junit.jupiter.api.BeforeEach;
-
 
 public class SimpleAgedCacheTest<K, V> {
     private static final int DEFAULT_CAPACITY = 16;
@@ -28,7 +27,7 @@ public class SimpleAgedCacheTest<K, V> {
         this.clock = clock;
         this.expirationDuration = expirationDuration;
         this.expirationTimeUnit = expirationTimeUnit;
-        this.cache = new HashMap[DEFAULT_CAPACITY];
+        this.cache = new HashMap [DEFAULT_CAPACITY];
         this.lock = new ReentrantReadWriteLock(true);
         this.size = 0;
     }
@@ -37,12 +36,13 @@ public class SimpleAgedCacheTest<K, V> {
      * Adds the specified key-value pair to the cache. If the cache already contains the specified key, the value is updated.
      *
      */
+
     public void put(K key, V value) {
         try {
-            lock.writeLock().lock();
-            Map<K, ExpirableEntry<K, V>> cache = this.cache[0]; // Add this line
+            lock.writeLock().lock() ;
+            Map<K, ExpirableEntry<K, V>> cache = this.cache[0]; 
             ExpirableEntry<K, V> entry = cache.get(key);
-            if (entry != null) {
+            if (entry!= null) {
                 entry.update(value, expirationDuration, expirationTimeUnit, clock);
             } else {
                 cache.put(key, new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
@@ -56,14 +56,14 @@ public class SimpleAgedCacheTest<K, V> {
        /**
      * Returns the value to which the specified key is mapped, or if this map contains no mapping for the key.
     */
+
     ExpirableEntry<K, V> entry = this.cache[0].get(key);
   
   
     /**
-     * Returns an integer hash code for the specified object. This method
-     * is supported for the benefit of hashtables such as those provided by
-     * {@link java.util.Hashtable}.
+     * Returns an integer hash code for the specified object. In this implementation, the hash code is the result of the XOR operation of the hash code of the object and the hash code of the object shifted to the right by 20 bits, XORed with the hash code of the object shifted to the right by 12 bits, XORed with the hash code of the object shifted to the right by 7 bits, and XORed with the hash code of the object shifted to the right by 4 bits.
      */
+
     private static int hash(Object key) {
         int h = key.hashCode();
         h ^= (h >>> 20) ^ (h >>> 12);
@@ -93,6 +93,7 @@ public class SimpleAgedCacheTest<K, V> {
             this.value = newValue;
             this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration);
         }
+    }
 
         boolean isExpired(long currentTime) {
             return currentTime >= expirationTime;
@@ -103,32 +104,32 @@ public class SimpleAgedCacheTest<K, V> {
         return new HashMap<K, V>(capacity);
     } 
 
+    { 
+        private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
 
-    @BeforeEach
-    public void setUp() {
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(this::cleanUp, expirationDuration, expirationDuration, expirationTimeUnit);
-    }
+        public void setUp() {
+            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler.scheduleAtFixedRate(this::cleanUp, expirationDuration, expirationDuration, expirationTimeUnit);)
+               }
     
-/**
- * Cleans up the cache by removing expired entries.
- */
-    private void cleanUp() {
-        try {
-            lock.writeLock.lock();
-            long currentTime = clock.millis();
-            List<K> expiredKeys = new ArrayList<>();
-            for (Map.Entry<K, ExpirableEntry<K, V>> entry : cache.entrySet()) {
-                if (entry.getValue().isExpired(currentTime)) {
-                    expiredKeys.add(entry.getKey());
-                }
+            private void cleanUp() {
+                try {
+                    lock.writeLock().lock();
+                    long currentTime - clock.millis();
+                    List<K> expiredKeys = new ArrayList<>();
+                    for (Map.Entry<K, ExpirableEntry<K, V>> entry : cache.entrySet()) {
+                        if (entry.getValue().isExpired(currentTime)) {
+                            expiredKeys.add(entry.getKey());
+                        }
+                    }
 
+                    for (K key : expiredKeys) 
+                        cache.remove(expiredKey);
+    
+                } finally {
+                    lock.writeLock().unlock();
+                }
+            }
         }
-    ``` for (K key : expiredKeys) {
-            cache.remove(key);
-        }
-    } finally {
-        lock.writeLock().unlock();
-    }
-}
-}
+             
+
