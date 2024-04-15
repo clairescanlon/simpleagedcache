@@ -19,7 +19,7 @@ public class SimpleAgedCacheTest {
         nonempty.put("aKey", "aValue", 2000);
         nonempty.put("anotherKey", "anotherValue", 2000);
     }
-    
+
     @Test
     public void isEmpty() {
         assertTrue(empty.isEmpty());
@@ -33,14 +33,21 @@ public class SimpleAgedCacheTest {
     }
 
     @Test
+    public void get() {
+        assertNull(empty.get("aKey"));
+        assertEquals("aValue", nonempty.get("aKey"));
+        assertEquals("anotherValue", nonempty.get("anotherKey"));
+    }
+
+    @Test
     public void getExpired() {
         TestClock clock = new TestClock();
 
         SimpleAgedCache expired = new SimpleAgedCache(clock);
-        expired.put("aKey", "aValue", 2000);
+        expired.put( "aKey", "aValue",2000);
         expired.put("anotherKey", "anotherValue", 4000);
 
-        clock.offset(Duration.ofMillis(30000));
+        clock.offset(Duration.ofMillis(3000));
 
         assertEquals(1, expired.size());
         assertEquals("anotherValue", expired.get("anotherKey"));
