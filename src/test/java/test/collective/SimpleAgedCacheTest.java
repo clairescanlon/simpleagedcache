@@ -113,3 +113,20 @@ public.void put(K key, V value) {
         lock.writeLock().unlock();
     }
 }
+
+/**
+ * Returns the value to which the specified key is mapped or if this map doesn't contain mapping for the key.
+ */
+
+ public V get(K key) {
+    Map<K, ExpirableEntry<K, V>> cache = this.cache[0];
+    ExpirableEntry<K, V> entry = cache.get(key);
+    if (entry == null) {
+        return null;
+    }
+    if (entry.isExpired(clock.millis())) {
+        cache.remove(key);
+        return null;
+    }
+    return entry.getValue();
+ }
