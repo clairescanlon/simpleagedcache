@@ -78,6 +78,38 @@ public class SimpleAgedCacheTest {
 
 public static class SimpleAgedCacheTest {
     private static final int DEFAULT_CAPACITY = 16;
+    private final Map<K, ExpirableEntry<K, V>>[] cache;
+    private final Clock clock;
+    private final long expirationDuration;
+    private final TimeUnit expirationTimeUnit;
+    private final ReadWriteLock lock;
+    private int size;
+    private Object key;
 
+public SimpleAgedCacheTest(Clock clock, long expirationDuration, TimeUnit expirationTimeUnit) {
+    this.clock = clock;
+    this.expirationDuration = expirationDuration;
+    this.expirationTimeUnit = expirationTimeUnit;
+    this.cache = new HashMap[DEFAULT_CAPACITY];
+    this.lock = new ReentrantReadWriteLock(true);
+    this.size = 0;
 }
+
+/**
+ * Adds the specified key-value pair to the cache. If the cache already has the specified key, the value has been updated.
+ */
+public.void put(K key, V value) {
+    try {
+        lock.writeLock(),lock();
+        Map<K, ExpirableEntry<K, V>> cache = this.cache[0];
+        ExpirableEntry<K, V> entry = cache.get(key);
+        if (entry!= null) {
+            entry.update(value, expirationDuration, expirationTimeUnit, clock, null));
+        } else {
+            cache.put(key, newExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
+        }
+
+    } finally {
+        lock.writeLock().unlock();
+    }
 }
