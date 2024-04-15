@@ -1,17 +1,14 @@
 package test.collective;
 
-import org.junit.jupiter.api.BeforeEach;
+import io.collective.SimpleAgedCache;
+import org.junit.Before;
+import org.junit.Test;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.time.Instant;
+import java.time.ZoneId;
+
+import static junit.framework.TestCase.*;
 
 public class SimpleAgedCacheTest<K, V> {
     private static final int DEFAULT_CAPACITY = 16;
