@@ -1,4 +1,3 @@
-package test.collective;
 
 import io.collective.SimpleAgedCache;
 import org.junit.Before;
