@@ -98,15 +98,15 @@ public SimpleAgedCacheTest(Clock clock, long expirationDuration, TimeUnit expira
 /**
  * Adds the specified key-value pair to the cache. If the cache already has the specified key, the value has been updated.
  */
-public.void put(K key, V value) {
+public void put(K key, V value) {
     try {
-        lock.writeLock(),lock();
+        lock.writeLock().lock();
         Map<K, ExpirableEntry<K, V>> cache = this.cache[0];
         ExpirableEntry<K, V> entry = cache.get(key);
-        if (entry!= null) {
-            entry.update(value, expirationDuration, expirationTimeUnit, clock, null));
+        if (entry != null) {
+            entry.update(value, expirationDuration, expirationTimeUnit, clock, null);
         } else {
-            cache.put(key, newExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
+            cache.put(key, new ExpirableEntry<>(key, value, expirationDuration, expirationTimeUnit, clock, null));
         }
 
     } finally {
@@ -130,3 +130,5 @@ public.void put(K key, V value) {
     }
     return entry.getValue();
  }
+} 
+
