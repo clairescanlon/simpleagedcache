@@ -26,5 +26,8 @@
     "editor.inlineSuggest.suppressSuggestions": true,
     "files.autoSaveWhenNoErrors": true,
     "files.trimTrailingWhitespace": true,
-    "editor.codeLensFontSize": 16
+    "editor.codeLensFontSize": 16,
+    "github.copilot.advanced": {
+
+    }
 }
