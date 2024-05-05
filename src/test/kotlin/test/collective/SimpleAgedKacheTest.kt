@@ -1,127 +1,54 @@
-import java.time.Clock
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.test.*
+class CustomLinkedList<T> {
+    private var head: Node<T>? = null
+    private var tail: Node<T>? = null
+    var size = 0
+        private set
 
-class SimpleAgedCacheTest {
-    private val empty = SimpleAgedCache()
-    private val nonempty = SimpleAgedCache()
-
-    @BeforeTest
-    fun before() {
-        nonempty.put("aKey", "aValue", 2000)
-        nonempty.put("anotherKey", "anotherValue", 2000)
-    }
-
-    @Test
-    fun isEmpty() {
-        assertTrue(empty.isEmpty())
-        assertFalse(nonempty.isEmpty())
-    }
-
-    @Test
-    fun size() {
-        assertEquals(0, empty.size())
-        assertEquals(2, nonempty.size())
-    }
-
-    @Test
-    fun get() {
-        assertNull(empty.get("aKey"))
-        assertEquals("aValue", nonempty.get("aKey"))
-        assertEquals("anotherValue", nonempty.get("anotherKey"))
-    }
-
-    @Test
-    fun getExpired() {
-        val clock = TestClock()
-
-        val expired = SimpleAgedCache(clock)
-        expired.put("aKey", "aValue", 2000)
-        expired.put("anotherKey", "anotherValue", 4000)
-
-        clock.offset(Duration.ofMillis(3000))
-
-        assertEquals(1, expired.size())
-        assertEquals("anotherValue", expired.get("anotherKey"))
-    }
-
-    class TestClock : Clock() {
-        var offset = Duration.ZERO
-
-        override fun getZone(): ZoneId {
-            return systemDefaultZone().zone
+    fun add(value: T) {
+        val node = Node(value)
+        if (isEmpty()) {
+            head = node
+        } else {
+            tail?.next = node
         }
-
-        override fun withZone(zone: ZoneId): Clock {
-            return offset(system(zone), offset)
-        }
-
-        override fun instant(): Instant {
-            return offset(systemDefaultZone(), offset).instant()
-        }
-
-        fun offset(offset: Duration) {
-            this.offset = offset
-        }
+        tail = node
+        size++
     }
-}
 
-class SimpleAgedCache(private val clock: Clock, private val expirationDuration: Long, private val expirationTimeUnit: TimeUnit) {
-    private val DEFAULT_CAPACITY = 16
-    private val cache: Array<MutableMap<Any, ExpirableEntry<Any, Any>>> = arrayOf(mutableMapOf())
-    private val lock = ReentrantReadWriteLock(true)
-
-    fun put(key: Any, value: Any) {
-        lock.writeLock().lock()
-        try {
-            val cache = this.cache[0]
-            val entry = cache[key]
-            if (entry != null) {
-                entry.update(value, expirationDuration, expirationTimeUnit, clock)
-            } else {
-                cache[key] = ExpirableEntry(key, value, expirationDuration, expirationTimeUnit, clock)
+    fun remove(value: T) {
+        var prev: Node<T>? = null
+        var curr = head
+        while (curr != null && curr.value != value) {
+            prev = curr
+            curr = curr.next
+        }
+        if (prev == null) {
+            head = curr?.next
+        } else if (curr != null) {
+            prev.next = curr.next
+            if (curr.next == null) {
+                tail = prev
             }
-        } finally {
-            lock.writeLock().unlock()
+        }
+        if (curr != null) {
+            size--
         }
     }
 
-    fun get(key: Any): Any? {
-        val cache = this.cache[0]
-        val entry = cache[key] ?: return null
-        if (entry.isExpired(clock.millis())) {
-            cache.remove(key)
-            return null
+    fun find(predicate: (T) -> Boolean): T? {
+        var curr = head
+        while (curr != null) {
+            if (predicate(curr.value)) {
+                return curr.value
+            }
+            curr = curr.next
         }
-        return entry.value
-    }
-
-    fun size(): Int {
-        return cache[0].size
+        return null
     }
 
     fun isEmpty(): Boolean {
-        return cache[0].isEmpty()
+        return size == 0
     }
 
-    inner class ExpirableEntry<K, V>(private val key: K, var value: V, private var expirationDuration: Long, private var expirationTimeUnit: TimeUnit, private var clock: Clock) {
-        private var expirationTime: Long = 0
-
-        init {
-            update(value, expirationDuration, expirationTimeUnit, clock)
-        }
-
-        fun update(value: V, expirationDuration: Long, expirationTimeUnit: TimeUnit, clock: Clock) {
-            this.value = value
-            this.expirationTime = clock.millis() + expirationTimeUnit.toMillis(expirationDuration)
-        }
-
-        fun isExpired(currentTimeMillis: Long): Boolean {
-            return currentTimeMillis > expirationTime
-        }
-    }
+    inner class Node<T>(var value: T, var next: Node<T>? = null)
 }
